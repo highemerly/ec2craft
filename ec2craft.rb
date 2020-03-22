@@ -62,7 +62,6 @@ class Ec2craftbot < Ec2discord::Bot
         "ブランチマイニングをする"
       ]
       r = rand(0..t.size-1)
-      pp event.user
       event.user.name + "さんは" + t[r]
     end
 
