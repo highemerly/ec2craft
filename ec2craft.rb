@@ -68,8 +68,8 @@ class Ec2craftbot < Ec2discord::Bot
     @msg_help["info"] = "サーバ情報を出力します。"
     @bot.command :info do |event|
       msg  = "```\n"
-      msg += "接続先: minecraft.handon.club\n"
-      msg +- "       ipv6.minecraft.handon.club (IPv6のみ)\n"
+      msg += "接続先: minecraft.handon.club      (IPv4)\n"
+      msg += "       ipv6.minecraft.handon.club (IPv6)\n"
       msg += "バージョン: Java版 1.15.2\n"
       msg += "必須MOD: なし（バニラ）\n"
       msg += "マップ: https://map.minecraft.handon.club/\n"
