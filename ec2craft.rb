@@ -2,33 +2,45 @@ require 'dotenv'
 require 'ec2discord'
 
 class Ec2craftbot < Ec2discord::Bot
-  def initialize
-    read_env
+  def setup
     super
-  end
 
-  def read_env
-    if ARGV[0] == nil then
-      Dotenv.load ".env"
-      $log.info("Reading .env ...")
-      puts "Readming .env ..."
-    else
-      if File.exist?(ARGV[0]) then
-        Dotenv.load ARGV[0]
-        $log.info("Reading #{ARGV[0].to_s} ...")
-        puts "Reading #{ARGV[0].to_s} ..."
-      else
-        $log.fatal("Cannot open #{ARGV[0].to_s}. Existed.")
-        puts "Cannot open #{ARGV[0].to_s}. Existed."
-        exit
-      end
+    @msg_help["minecraft"] = "マイクラアプリに関連する制御要求，または状態確認を行います。"
+    @bot.command :minecraft do |event, cmd|
+      setup_minecraft(event, cmd)
+    end
+
+    @msg_help["info"] = "情報を一覧で表示します。"
+    @bot.command :info do |event|
+      setup_info(event)
     end
   end
 
-  def setup
+  def set_parameter
     super
-    @msg_help["nanisuru"] = "なにをすべきか教えてくれます。"
-    @bot.command :nanisuru do |event|
+
+    @sh["minecraft"] = Hash.new
+    @sh["minecraft"]["reload"] = @sh_ssh + @hostname + " sudo systemctl reload " + ENV["SV_SERVICENAME"]
+    @sh["minecraft"]["start"] = @sh_ssh + @hostname + " sudo systemctl start " + ENV["SV_SERVICENAME"]
+  end
+
+  def setup_minecraft(event, cmd)
+    case cmd
+    when "reload" then
+      @last_control_time = Time.now.to_i
+      event.respond("アプリの再起動を要求します。起動までお待ちください。")
+      stdout, stderr = Open3.capture3(@sh["minecraft"]["reload"])
+      if stderr.include?("timed") then
+        event.respond("サーバが起動していません")
+      end
+    when "start" then
+      @last_control_time = Time.now.to_i
+      stdout, stderr = Open3.capture3(@sh["minecraft"]["start"])
+      if stderr.include?("timed") then
+        event.respond("サーバが起動していません")
+      end
+      event.respond("アプリの起動を要求しました。")
+    when "nanisuru" then
       t = Array[
         "ダイヤを掘りにいく",
         "畑に植える",
@@ -63,19 +75,52 @@ class Ec2craftbot < Ec2discord::Bot
       ]
       r = rand(0..t.size-1)
       event.user.name + "さんは" + t[r]
-    end
-
-    @msg_help["info"] = "サーバ情報を出力します。"
-    @bot.command :info do |event|
-      msg  = "```\n"
-      msg += "接続先: minecraft.handon.club      (IPv4)\n"
-      msg += "       ipv6.minecraft.handon.club (IPv6)\n"
-      msg += "バージョン: Java版 1.15.2\n"
-      msg += "必須MOD: なし（バニラ）\n"
-      msg += "マップ: https://map.minecraft.handon.club/\n"
-      msg += "ソースコード: https://github.com/highemerly/ec2craft\n"
-      msg += "ルール: 特になし，ご自由に遊んでください\n"
+    when "info" then
+      setup_info(event)
+    else
+      msg  = ""
+      unless cmd == "help" || cmd == nil then
+        msg += "存在しないコマンドです。"
+      end
       msg += "```\n"
+      msg += @prefix + "minecraft [command]\n"
+      msg += "       " + @msg_help["minecraft"] + "\n"
+      msg += "\n"
+      msg += " [command]\n"
+      msg += "   start.....アプリデーモンを起動します。\n"
+      msg += "   reload....アプリデーモンを再起動します。\n"
+      msg += "   info......サーバに関する情報を出力します。\n"
+      msg += "   nanisuru..何をすべきか教えてくれます。\n"
+      msg += "   help......このメッセージを表示します。\n"
+      msg += "```\n"
+    end
+  end
+
+  def setup_info(event)
+    event.send_embed do |embed|
+      embed.title = "はんドンマイクラ鯖"
+      embed.description = "誰でも参加できるマインクラフトサーバーです。"
+      embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url: 'https://media.handon.club/media_attachments/files/105/562/970/656/379/340/original/6bd9e58f7be47ec4.png')
+      embed.add_field(
+        name: "接続先",
+        value: "minecraft.handon.club",
+        inline: false,
+      )
+      embed.add_field(
+        name: "バージョン",
+        value: "Java版 1.16.4",
+        inline: true,
+      )
+      embed.add_field(
+        name: "必須MOD",
+        value: "なし",
+        inline: true,
+      )
+      embed.add_field(
+        name: "マップ",
+        value: "https://map.minecraft.handon.club/",
+        inline: false,
+      )
     end
   end
 end
