@@ -16,3 +16,7 @@ $ vi .env
   # 各種設定変数を適切に設定する
 $ ruby ec2craft.rb
 ```
+
+## 詳細
+
+このbotの大半の実装はRubygemsの Ec2Discord に依存します。詳細は https://github.com/highemerly/ec2discord/ も参照ください。
