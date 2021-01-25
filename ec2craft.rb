@@ -1,6 +1,10 @@
 require 'dotenv'
 require 'ec2discord'
 
+MINECRAFT_VERSION="Java版 1.16.4"
+MINECRAFT_SERVER="minecraft.handon.club"
+MINECRAFT_MAP="https://minecraft-map.handon.club/"
+
 class Ec2craftbot < Ec2discord::Bot
   def setup
     super
@@ -16,12 +20,12 @@ class Ec2craftbot < Ec2discord::Bot
     end
   end
 
-  def set_parameter
-    super
+  def sh_minecraft_reload
+    @sh_ssh + hostname + " sudo systemctl reload " + ENV["SV_SERVICENAME"]
+  end
 
-    @sh["minecraft"] = Hash.new
-    @sh["minecraft"]["reload"] = @sh_ssh + @hostname + " sudo systemctl reload " + ENV["SV_SERVICENAME"]
-    @sh["minecraft"]["start"] = @sh_ssh + @hostname + " sudo systemctl start " + ENV["SV_SERVICENAME"]
+  def sh_minecraft_start
+    @sh_ssh + hostname + " sudo systemctl start " + ENV["SV_SERVICENAME"]
   end
 
   def setup_minecraft(event, cmd)
@@ -29,13 +33,13 @@ class Ec2craftbot < Ec2discord::Bot
     when "reload" then
       @last_control_time = Time.now.to_i
       event.respond("アプリの再起動を要求します。起動までお待ちください。")
-      stdout, stderr = Open3.capture3(@sh["minecraft"]["reload"])
+      stdout, stderr = Open3.capture3(sh_minecraft_reload)
       if stderr.include?("timed") then
         event.respond("サーバが起動していません")
       end
     when "start" then
       @last_control_time = Time.now.to_i
-      stdout, stderr = Open3.capture3(@sh["minecraft"]["start"])
+      stdout, stderr = Open3.capture3(sh_minecraft_start)
       if stderr.include?("timed") then
         event.respond("サーバが起動していません")
       end
@@ -103,12 +107,17 @@ class Ec2craftbot < Ec2discord::Bot
       embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url: 'https://media.handon.club/media_attachments/files/105/562/970/656/379/340/original/6bd9e58f7be47ec4.png')
       embed.add_field(
         name: "接続先",
-        value: "minecraft.handon.club",
+        value: "#{MINECRAFT_SERVER}",
+        inline: false,
+      )
+      embed.add_field(
+        name: "接続先(予備：上記で繋がらない場合)",
+        value: "#{hostname}",
         inline: false,
       )
       embed.add_field(
         name: "バージョン",
-        value: "Java版 1.16.4",
+        value: "#{MINECRAFT_VERSION}",
         inline: true,
       )
       embed.add_field(
@@ -118,7 +127,7 @@ class Ec2craftbot < Ec2discord::Bot
       )
       embed.add_field(
         name: "マップ",
-        value: "https://map.minecraft.handon.club/",
+        value: "#{MINECRAFT_MAP}",
         inline: false,
       )
     end
